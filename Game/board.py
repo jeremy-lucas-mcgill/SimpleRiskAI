@@ -54,20 +54,11 @@ class Board:
     
     #Update the board state variable. Normalize troop num by dividing by the largest one,phase is (1,2,3,4,5)
     def update_board_state(self,player_index,num_players,phase,num_phases,last_territory_selected_index):
-        max_troops_board = np.max(np.array([self.board_dict[k].troops for k in self.board_dict.keys()]))
         territory_matrix = np.array([[self.board_dict[k].troops if self.board_dict[k].player_index == p else 0 for k in self.board_dict.keys()] for p in range(num_players)]).reshape(-1)
         one_hot_players = np.array([1 if i == player_index else 0 for i in range(num_players)])
         one_hot_phase = np.array([1 if i == (phase-1) else 0 for i in range(num_phases)])
         last_territory_selected = np.array([1 if i == last_territory_selected_index else 0 for i in range(len(self.board_dict.keys()))])
         self.board_state = np.concatenate([territory_matrix,one_hot_players, one_hot_phase, last_territory_selected])
-    
-    #Get the board state variable with placed troops. Normalize troop num by dividing by the largest one,phase is (1,2,3,4,5)
-    def get_board_state_render(self,player_index,num_players,phase,num_phases,last_territory_selected_index):
-        territory_matrix = np.array([[self.board_dict[k].troops+self.board_dict[k].troops_to_add if self.board_dict[k].player_index == p else 0 for k in self.board_dict.keys()] for p in range(num_players)]).reshape(-1)
-        one_hot_players = np.array([1 if i == player_index else 0 for i in range(num_players)])
-        one_hot_phase = np.array([1 if i == (phase-1) else 0 for i in range(num_phases)])
-        last_territory_selected = np.array([1 if i == last_territory_selected_index else 0 for i in range(len(self.board_dict.keys()))])
-        return np.concatenate([territory_matrix,one_hot_players, one_hot_phase, last_territory_selected])
   
     # Adding an amount of troops to a territory
     def addTroops(self, terrkey, num, player: Player):
@@ -78,20 +69,6 @@ class Board:
             terr.player_index = player.index
             if terr.troops > self.maxTroopsOnTerr:
                 self.maxTroopsOnTerr = terr.troops
-
-    # Set the amount of troops to be added at the end of the turn
-    def setTroopsAvailable(self,terrkey,num):
-        terr, tindex = self.getTerritory(terrkey)
-        terr.troops_to_add += num
-
-    #Add the available troops at the end of the turn
-    def addAvailableTroops(self,terrkey):
-        terr, tindex = self.getTerritory(terrkey)
-        terr.troops += terr.troops_to_add
-        if terr.troops > self.maxTroopsOnTerr:
-            self.maxTroopsOnTerr = terr.troops
-        terr.troops_to_add = 0
-        
         
     # Setting the amount of troops on a territory to a fixed number
     def setTroops(self, terrkey, num, player: Player):

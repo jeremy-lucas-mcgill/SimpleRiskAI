@@ -3,8 +3,7 @@ class Territory:
         self.name = name            # Name of the territory, used for displaying ONLY (not dict key)
         self.adjecency_list = []    # List of all adjecent territories
         self.pos = pos              # Position on map, for displaying troops and attacks
-        self.troops = 0             # Amount of troops on territory
-        self.troops_to_add = 0      # Troops to add to territory       
+        self.troops = 0             # Amount of troops on territory    
         self.player_index = None          # Color of player that owns troops
     
     # Adds a connection to the adjecency list

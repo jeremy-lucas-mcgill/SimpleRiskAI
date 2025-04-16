@@ -40,7 +40,7 @@ class RiskDisplay():
             pygame.draw.ellipse(self.screen, COLORS[territory.player_index], circle_rect, 0)
 
             #draw text
-            text = self.font.render(str(territory.troops) + (" " + str(territory.troops_to_add) + "*" if territory.troops_to_add > 0 else ""), True, BLACK)
+            text = self.font.render(str(territory.troops), True, BLACK)
             text_rect = text.get_rect(center=circle_center) 
             self.screen.blit(text, text_rect)
 

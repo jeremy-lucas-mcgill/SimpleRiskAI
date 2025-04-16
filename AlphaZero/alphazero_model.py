@@ -77,7 +77,7 @@ class AlphaZeroModel(nn.Module):
                 optimizer.step()
                 running_loss += loss.item()
 
-            #print(f"Epoch {epoch}/{epochs}, Loss: {running_loss/len(data_loader)}")
+            print(f"Epoch {epoch}/{epochs}, Loss: {running_loss/len(data_loader)}")
 
 
 

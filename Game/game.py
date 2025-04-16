@@ -56,6 +56,17 @@ class Game:
         #Initialize Observation
         self.board.update_board_state(self.currentPlayer, len(self.player_list), self.currentPhase,self.total_num_phases,-1)
 
+    def reset(self):
+        # Reset board
+        self.board.reset()
+
+        # PLAYERS
+        for p in self.player_list:
+            p.clearPlayer()
+        #Initialize Observation
+        self.board.update_board_state(self.currentPlayer, len(self.player_list), self.currentPhase,self.total_num_phases,-1)
+
+
     # MAIN
     # Checks for win condition
     # triggers the end game
@@ -132,9 +143,6 @@ class Game:
 
     # Increment whose turn it is
     def nextPlayer(self):
-        #add troops
-        self.player_list[self.currentPlayer].add_troops(self.board)
-
         #make sure the next player can play
         while self.player_list[(self.currentPlayer + 1) % len(self.player_list)].amountOfOwned == 0:
             self.currentPlayer = (self.currentPlayer + 1) % len(self.player_list)

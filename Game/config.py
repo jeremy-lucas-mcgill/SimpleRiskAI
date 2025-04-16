@@ -7,7 +7,6 @@ TERRITORIES = 9
 ####################display parameters############################
 import pygame
 
-
 WHITE = (255,255,255)
 BLACK = (0,0,0)
 RED = (255,0,0)
@@ -24,7 +23,7 @@ LINE_WIDTH = 1
 FPS = 60
 RADIUS = 1
 FONT_SIZE = 30
-TIME_DELAY = 1000
+TIME_DELAY = 500
 
 # Map grid coordinates to screen coordinates
 def grid_pos_to_screen_pos(grid_pos):
@@ -64,3 +63,103 @@ def print_obs(obs,action=None):
         string += f"Turn: {obs[TERRITORIES*PLAYERS:TERRITORIES*PLAYERS+PLAYERS]}, Phase: {obs[TERRITORIES*PLAYERS+PLAYERS:TERRITORIES*PLAYERS+PLAYERS+PHASES]}, Last Index: {obs[TERRITORIES*PLAYERS+PLAYERS+PHASES:]}\n"
         string += f"Taken Action: {action}" if not action is None else ""
         print(string)
+
+
+"""
+# NORTH AMERICA 
+
+Alaska: (45, 95)
+
+North West Territory: (110, 75)
+
+Greenland: (215, 45)
+
+Alberta: (105, 130)
+
+Ontario: (160, 130)
+
+Quebec: (225, 125)
+
+Western United States: (105, 190)
+
+Eastern United States: (160, 195)
+
+Central America: (120, 265)
+
+# SOUTH AMERICA
+
+Venezuela: (165, 300)
+
+Peru: (180, 370)
+
+Brazil: (225, 330)
+
+Argentina: (185, 460)
+
+# EUROPE 
+
+Iceland: (330, 75)
+
+Scandinavia: (395, 70)
+
+Ukraine: (460, 140)
+
+Great Britain: (330, 135)
+
+Northern Europe: (390, 150)
+
+Western Europe: (340, 190)
+
+Southern Europe: (400, 190)
+
+# AFRICA 
+
+North Africa: (335, 270)
+
+Egypt: (400, 250)
+
+East Africa: (420, 330)
+
+Congo: (370, 335)
+
+South Africa: (390, 430)
+
+Madagascar: (455, 410)
+
+# ASIA 
+
+Ural: (510, 155)
+
+Siberia: (585, 115)
+
+Yakutsk: (650, 95)
+
+Kamchatka: (700, 125)
+
+Irkutsk: (620, 150)
+
+Mongolia: (600, 175)
+
+Japan: (680, 185)
+
+China: (555, 210)
+
+Afghanistan: (490, 190)
+
+Middle East: (460, 245)
+
+India: (535, 260)
+
+Siam: (580, 275)
+
+# AUSTRALIA
+
+Indonesia: (570, 340)
+
+New Guinea: (650, 350)
+
+Western Australia: (605, 430)
+
+Eastern Australia: (665, 430)
+
+"""

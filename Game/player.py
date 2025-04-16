@@ -1,5 +1,6 @@
 import random
 import numpy as np
+from Game.config import *
 # PLAYER CLASS
 #  Default player class
 #  Picks random territories for every action
@@ -48,14 +49,10 @@ class Player:
         terrkey = self.terr_list[sampled_action]
         #place troops
         if terrkey in self.myOwnedTerritories:
-            board_obj.setTroopsAvailable(terrkey,available)
+            board_obj.addTroops(terrkey,available,self)
             self.debug_mode and print(f'Phase 1: Player {self.index} Placed {available} troops at {terrkey}')
             return True,available
         return False,0
-    
-    def add_troops(self,board_obj):
-        for key in board_obj.board_dict.keys():
-            board_obj.addAvailableTroops(key)
     
     # GAME ACTION Phase 2
     #  Asks the player where to attack from, None represents no attack. 

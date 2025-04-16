@@ -15,12 +15,12 @@ def set_seed(seed=42):
     torch.backends.cudnn.deterministic = True  # Ensures deterministic behavior in cuDNN
     torch.backends.cudnn.benchmark = False  # Ensures reproducibility
 
-set_seed(1)  # Call this function at the start of your script
+set_seed(0)  # Call this function at the start of your script
 #initialize environment
 env = RiskEnv(max_steps=500)
 
 #set the model path
-model_path = "alphazero_model.pth"
+model_path = "new_alphazero_model_500.pth"
 
 #load the model if it exists
 if os.path.exists:

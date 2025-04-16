@@ -3,7 +3,7 @@ from gymnasium import spaces
 from Game.game import Game
 import numpy as np 
 from Game.display import RiskDisplay
-from Game.config import print_obs
+from Game.config import *
 
 
 class RiskEnv(gym.Env):
@@ -25,13 +25,10 @@ class RiskEnv(gym.Env):
         self.observation_space = spaces.Box(low=0,high=1,shape=(observation_length,),dtype=np.float32)
 
         #create the display object
-        self.display = RiskDisplay(500)
+        self.display = RiskDisplay(TIME_DELAY)
 
         #set max steps
         self.max_steps = max_steps
-
-        #set the current observation for rendering
-        self.current_obs_render = None
 
     def reset(self, seed=None, options=None):
         #set seed if not provided
@@ -50,10 +47,6 @@ class RiskEnv(gym.Env):
         #return observation
         obs = self.game.board.board_state
 
-        #set observation and action for render
-        self.current_obs_render = self.game.board.get_board_state_render(self.game.currentPlayer,self.game.num_players,self.game.currentPhase,self.game.total_num_phases,self.game.last_territory_selected_index)
-        self.current_action = None
-
         return obs, {}
     
     def step(self, action):
@@ -63,10 +56,6 @@ class RiskEnv(gym.Env):
         #convert the action into movement
         obs, reward, done, info = self.game.playersPlay(action)
 
-        #set observation for render
-        self.current_obs_render = self.game.board.get_board_state_render(self.game.currentPlayer,self.game.num_players,self.game.currentPhase,self.game.total_num_phases,self.game.last_territory_selected_index)
-        self.current_action = action
-
         #return all parameters
         return obs,reward,done,(self.total_steps >= self.max_steps), {"Current Player": info["Current Player"],"Winner": info["Winner"]}
 
@@ -74,7 +63,7 @@ class RiskEnv(gym.Env):
         if render_mode == 'Visual':
             self.display.draw(self.game.board)
         else:
-            print_obs(self.current_obs_render,self.current_action)
+            print_obs(self.game.board.board_state,None)
             
 
     def close(self):

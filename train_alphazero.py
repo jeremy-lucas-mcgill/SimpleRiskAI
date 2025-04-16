@@ -26,7 +26,7 @@ set_seed(0)  # Call this function at the start of your script
 env = RiskEnv(max_steps=500)
 
 #set the model path
-model_path = "alphazero_model.pth"
+model_path = "alphazero_model_500.pth"
 
 #load the model if it exists
 if os.path.exists(model_path):
@@ -40,18 +40,17 @@ else:
 #will be adjusted to -1, 0, or 1 according to depending on if they won or not
 dataset = RiskDataset(30000)
 
+#empty game for tree
+mcts_game = Game()
+mcts_game.start()
+
 #training parameters
-num_episodes = 100
-num_episodes_per_update = 10
-num_episodes_per_save = 100
+num_episodes = 1000
+num_episodes_per_update = 100
 episode_lengths = []
 
 #self play
 for episode in tqdm(range(num_episodes), desc="Training Progress"):
-    #check if it is time to save the model
-    if episode % num_episodes_per_update == 0 and episode > 0:
-        torch.save(model, f"{model_path}_{episode}")
-
     #check if it is time to update the model
     if episode % num_episodes_per_update == 0 and episode > 0:
         #train the model on the dataset
@@ -59,11 +58,10 @@ for episode in tqdm(range(num_episodes), desc="Training Progress"):
         actions = torch.tensor(np.array(dataset.df['action'].to_list()),dtype=torch.float32)
         values = torch.tensor(dataset.df['value'].values,dtype=torch.float32)
         model.train_model(states,values,actions)
-        #set new update frequency
-        if episode < 100:
-            num_episodes_per_update = 10
-        else:
-            num_episodes_per_update = 100
+
+    #check if it is time to save the model
+    if episode % num_episodes_per_update == 0 and episode > 0:
+        torch.save(model, f"{episode}_{model_path}")
     #reset the environment
     obs, _ = env.reset()
     done = False
@@ -74,7 +72,7 @@ for episode in tqdm(range(num_episodes), desc="Training Progress"):
     while not done and not truncated:
         step += 1
         #initialize the tree search
-        tree_search = AlphaMCTS(obs, model,num_simuations=10)
+        tree_search = AlphaMCTS(obs, model,mcts_game,num_simuations=30)
 
         #call search
         tree_search.search()
@@ -84,7 +82,7 @@ for episode in tqdm(range(num_episodes), desc="Training Progress"):
 
         #take a step in the environment
         obs, _, done, truncated, info = env.step(action)
-        
+
         #assemble data for this step
         data_step = (obs, action, info["Current Player"])
 
@@ -100,7 +98,7 @@ for episode in tqdm(range(num_episodes), desc="Training Progress"):
     episode_lengths.append(step)
 
 #save model at the end
-torch.save(model, model_path)
+torch.save(model, "new_"+model_path)
 
 #close the environment
 env.close()

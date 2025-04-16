@@ -9,12 +9,13 @@ import numpy as np
 #Input the root node
 #output action distribution
 class AlphaMCTS:
-    def __init__(self,root_state,model,num_simuations=100,tau=1):
+    def __init__(self,root_state,model,game,num_simuations=100,tau=1):
         #create the root node with the root state, no parent, and probability 1
         self.root = Node(root_state,None,1)
         self.model = model
         self.num_simulations = num_simuations
         self.tau = tau
+        self.game = game
     def search(self):
         for _ in range(self.num_simulations):
             #search for best leaf node
@@ -38,18 +39,18 @@ class AlphaMCTS:
             best_action = max(node.children,key=lambda u: node.children[u].calculate_PUCB(node.N))
             node = node.children[best_action]
         return node
+    
     def expand(self,node):
         #valid actions, should be a list of ints corresponding to the valid actions
-        valid_actions = getValidActionsFromState(node.state)
-        
+        valid_actions = getValidActionsFromState(node.state,self.game)
         #next states
-        next_states = [getNextState(node.state,action) for action in valid_actions]
+        next_states = [getNextState(node.state,action,self.game) for action in valid_actions]
         #probabilties
         value, probabilities = self.model.sample_action(torch.tensor(node.state,dtype=torch.float32))
-        probabilities = probabilities.detach().numpy()
-        valid_probabilities = [probabilities[action] for action in valid_actions]
+        valid_probabilities = probabilities.detach().numpy()[valid_actions]
         #expand the node
         node.expand(valid_actions,next_states,valid_probabilities)
+
     def simulate(self,node):
         value, _ = self.model.sample_action(torch.tensor(node.state,dtype=torch.float32))
         return value.item()
@@ -114,34 +115,8 @@ class Node:
 # Passing in a Game, State, and Action, return the next State
 # The game should be of type game, the state should be a 1d array, and the action should be of type int
 # Next State will also be a 1d array
-def getNextState(state, action):
-    #create an empty game
-    game = Game()
-    game.start()
-
-    #extract info from state
-    player_territories,current_player_index,current_phase,current_last_selected_index = getStateInfo(state)
-
-    #create the players
-    game.player_list = [Player(list(game.board.board_dict.keys()),p) for p in range(game.num_players)]
-
-    #fill board, call set troops on all territories, add the territories to the players
-    for index,key in enumerate(game.board.board_dict.keys()):
-        num_troops, player_index = [(p_t[index],p_i) for p_i,p_t in enumerate(player_territories) if p_t[index] != 0][0]
-        game.board.setTroops(key, num_troops, game.player_list[player_index])
-        game.player_list[player_index].gainATerritory(key)
-    
-    #set the game turn and phase
-    game.currentPlayer = current_player_index
-    game.currentPhase = current_phase
-
-    #set the last index of the current player
-    if current_last_selected_index != -1:
-        game.player_list[current_player_index].from_terr_sel = game.player_list[current_player_index].terr_list[current_last_selected_index]
-    
-    #update the initial board state
-    game.board.update_board_state(current_player_index,game.num_players,current_phase,game.total_num_phases, current_last_selected_index)
-
+def getNextState(state, action, game):
+    game = loadGameState(state, game)
     #one hot action
     action = np.eye(len(game.board.board_dict.keys()) + 1)[action]
     #carry out action
@@ -150,39 +125,14 @@ def getNextState(state, action):
     #return the state
     return game.board.board_state
 
-def getValidActionsFromState(state):
-    #create an empty game
-    game = Game()
-    game.start()
-
-    #extract info from state
-    player_territories,current_player_index,current_phase,current_last_selected_index = getStateInfo(state)
-
-    #create the players
-    game.player_list = [Player(list(game.board.board_dict.keys()),p) for p in range(game.num_players)]
-
-    #fill board, call set troops on all territories, add the territories to the players
-    for index,key in enumerate(game.board.board_dict.keys()):
-        num_troops, player_index = [(p_t[index],p_i) for p_i,p_t in enumerate(player_territories) if p_t[index] != 0][0]
-        game.board.setTroops(key, num_troops, game.player_list[player_index])
-        game.player_list[player_index].gainATerritory(key)
-    
-    #set the game turn and phase
-    game.currentPlayer = current_player_index
-    game.currentPhase = current_phase
-
-    #set the last index of the current player
-    if current_last_selected_index != -1:
-        game.player_list[current_player_index].from_terr_sel = game.player_list[current_player_index].terr_list[current_last_selected_index]
-    
-    #update the initial board state
-    game.board.update_board_state(current_player_index,game.num_players,current_phase,game.total_num_phases, current_last_selected_index)
+def getValidActionsFromState(state, game):
+    game = loadGameState(state,game)
     # get list of all actions from current player
-    valid_actions = game.player_list[current_player_index].getValidActions(game.board,game.currentPhase)
+    valid_actions = game.player_list[game.currentPlayer].getValidActions(game.board,game.currentPhase)
+
     return valid_actions
 
 def getStateInfo(state):
-
     #extract info from state
     num_players = PLAYERS
     num_phases = PHASES
@@ -208,4 +158,28 @@ def isTerminalState(state):
     player_won = any(np.all(np.array(territories) > 0) for territories in player_territories)
 
     return player_won
+
+def loadGameState(state,game):
+    #reset the game
+    game.reset()
+    #extract info from state
+    player_territories,current_player_index,current_phase,current_last_selected_index = getStateInfo(state)
+
+    #fill board, call set troops on all territories, add the territories to the players
+    for index,key in enumerate(game.board.board_dict.keys()):
+        num_troops, player_index = [(p_t[index],p_i) for p_i,p_t in enumerate(player_territories) if p_t[index] != 0][0]
+        game.board.setTroops(key, num_troops, game.player_list[player_index])
+        game.player_list[player_index].gainATerritory(key)
     
+    #set the game turn and phase
+    game.currentPlayer = current_player_index
+    game.currentPhase = current_phase
+
+    #set the last index of the current player
+    if current_last_selected_index != -1:
+        game.player_list[current_player_index].from_terr_sel = game.player_list[current_player_index].terr_list[current_last_selected_index]
+    
+    #update the initial board state
+    game.board.update_board_state(current_player_index,game.num_players,current_phase,game.total_num_phases, current_last_selected_index)
+
+    return game

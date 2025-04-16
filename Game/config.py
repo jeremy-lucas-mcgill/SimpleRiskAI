@@ -1,8 +1,18 @@
 ####################game parameters############################
-PLAYERS = 4
+PLAYERS = 6
 PHASES = 5
 MAXTROOPS = 1000
-TERRITORIES = 9
+###DEFINE WHICH CONTINENTS TO USE###
+NORTH_AMERICA = False #9
+SOUTH_AMERICA = False #4
+EUROPE = True #7
+AFRICA = True #6
+ASIA = True #12
+AUSTRALIA = True #4
+
+###UPDATE TERRITORY COUNT###
+TERRITORIES = sum([count if active else 0 for (active, count) in [(NORTH_AMERICA,9),(SOUTH_AMERICA,4),(EUROPE,7),(AFRICA,6),(ASIA,12),(AUSTRALIA,4)]])
+print(TERRITORIES)
 
 ####################display parameters############################
 import pygame
@@ -13,17 +23,21 @@ RED = (255,0,0)
 GREEN = (0,255,0)
 BLUE = (0,0,255)
 YELLOW = (255,255,0)
-COLORS = {0:RED,1:BLUE,2:YELLOW,3:GREEN}
+PURPLE = (160,32,240)
+ORANGE = (255,165,0)
+PINK = (255,192,203)
+
+COLORS = {0:RED,1:BLUE,2:YELLOW,3:GREEN,4:PURPLE,5:ORANGE}
 SCREEN_WIDTH,SCREEN_HEIGHT = 800,600
-GRID_SCREEN_WIDTH,GRID_SCREEN_HEIGHT = 400,300
-GRID_WIDTH,GRID_HEIGHT = 10,10
+GRID_SCREEN_WIDTH,GRID_SCREEN_HEIGHT = 500,400
+GRID_WIDTH,GRID_HEIGHT = 750,500
 GRID_SCREEN_POS_X,GRID_SCREEN_POS_Y = 50,50
 RECT_THICKNESS = 1
 LINE_WIDTH = 1
 FPS = 60
-RADIUS = 1
+RADIUS = 20
 FONT_SIZE = 30
-TIME_DELAY = 500
+TIME_DELAY = 100
 
 # Map grid coordinates to screen coordinates
 def grid_pos_to_screen_pos(grid_pos):

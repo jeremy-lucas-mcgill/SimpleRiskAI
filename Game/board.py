@@ -17,31 +17,188 @@ class Board:
         self.debug_mode = debug_mode
         self.maxTroopsOnTerr = MAXTROOPS
 
+        #DEFINE CONTINENT LISTS
+        north_america = ['alaska','nwt','alberta','ontario','quebec','wus','eus','greenland','ca']
+        south_america = ['venezuela','peru','brazil','argentina']
+        europe = ['iceland','scand','ukraine','gb','neur','weur','seur']
+        africa = ['nafr','egypt','eafr','congo','safr','mad']
+        asia = ['ural','siberia','yakutsk','kam','irkutsk','mong','japan','china','afgh','me','india','siam']
+        australia = ['indo','ng','waus','eaus']
+
+        #Continent Dictionary (ACTIVE,NUMBER OF TERRITORIES, LIST, TROOPS TO BE GAINED)
+        self.continent_dict = {
+            'NORTH AMERICA':(NORTH_AMERICA,9,north_america,5),
+            'SOUTH AMERICA':(SOUTH_AMERICA,4,south_america,2),
+            'EUROPE':(EUROPE,7,europe,5),
+            'AFRICA':(AFRICA,6,africa,3),
+            'ASIA':(ASIA,12,asia,7),
+            'AUSTRALIA':(AUSTRALIA,4,australia,2)
+        }
+
         ###Define the Connections###
         # NORTH AMERICA
-        self.board_dict['alaska'] = Territory('Alaska', [1,1])
-        self.board_dict['nwt'] = Territory('North West Territory', [1,5])
-        self.board_dict['alberta'] = Territory('Alberta', [4,3])
-        self.board_dict['ontario'] = Territory('Ontario', [4,6])
-        self.board_dict['quebec'] = Territory('Quebec', [4,8])
-        self.board_dict['wus'] = Territory('Western United States', [7,4])
-        self.board_dict['eus'] = Territory('Eastern United States', [7,7])
-        self.board_dict['greenland'] = Territory('Greenland', [1,10])
-        self.board_dict['ca'] = Territory('Central America', [9,4])
-        self.connections('alaska', 'nwt')
-        self.connections('alaska', 'alberta')
-        self.connections('nwt', 'greenland')
-        self.connections('nwt', 'alberta')
-        self.connections('nwt', 'ontario')
-        self.connections('alberta', 'ontario')
-        self.connections('alberta', 'wus')
-        self.connections('ontario', 'quebec')
-        self.connections('ontario', 'greenland')
-        self.connections('quebec', 'greenland')
-        self.connections('quebec', 'eus')
-        self.connections('wus', 'eus')
-        self.connections('wus', 'ca')
-        self.connections('eus', 'ca')
+        if NORTH_AMERICA:
+            self.board_dict['alaska'] = Territory('Alaska', [45,95])
+            self.board_dict['nwt'] = Territory('North West Territory', [110,75])
+            self.board_dict['alberta'] = Territory('Alberta', [105,130])
+            self.board_dict['ontario'] = Territory('Ontario', [160,130])
+            self.board_dict['quebec'] = Territory('Quebec', [225,125])
+            self.board_dict['wus'] = Territory('Western United States', [105,190])
+            self.board_dict['eus'] = Territory('Eastern United States', [160,195])
+            self.board_dict['greenland'] = Territory('Greenland', [215,45])
+            self.board_dict['ca'] = Territory('Central America', [120,265])
+        
+            self.connections('alaska', 'nwt')
+            self.connections('alaska', 'alberta')
+            self.connections('nwt', 'greenland')
+            self.connections('nwt', 'alberta')
+            self.connections('nwt', 'ontario')
+            self.connections('alberta', 'ontario')
+            self.connections('alberta', 'wus')
+            self.connections('ontario', 'quebec')
+            self.connections('ontario', 'greenland')
+            self.connections('quebec', 'greenland')
+            self.connections('quebec', 'eus')
+            self.connections('wus', 'eus')
+            self.connections('wus', 'ca')
+            self.connections('eus', 'ca')
+
+        #SOUTH AMERICA
+        if SOUTH_AMERICA:
+            self.board_dict['venezuela'] = Territory('Venezuela', [165,300])
+            self.board_dict['peru'] = Territory('Peru', [180,370])
+            self.board_dict['brazil'] = Territory('Brazil', [225,330])
+            self.board_dict['argentina'] = Territory('Argentina', [185,460])
+
+            self.connections('venezuela','peru')
+            self.connections('venezuela','brazil')
+            self.connections('peru','brazil')
+            self.connections('argentina','peru')
+            self.connections('argentina','brazil')
+
+        #NORTH AMERICA TO SOUTH AMERICA
+        if NORTH_AMERICA and SOUTH_AMERICA:
+            self.connections('ca','venezuela')
+
+        #EUROPE
+        if EUROPE:
+            self.board_dict['iceland'] = Territory('Iceland', [330,75])
+            self.board_dict['scand'] = Territory('Scandinavia', [395,70])
+            self.board_dict['ukraine'] = Territory('Ukraine', [460,140])
+            self.board_dict['gb'] = Territory('Great Britain', [330,135])
+            self.board_dict['neur'] = Territory('Northern Europe', [390,150])
+            self.board_dict['weur'] = Territory('Western Europe', [340,190])
+            self.board_dict['seur'] = Territory('Southern Europe', [400,190])
+
+            self.connections('iceland','scand')
+            self.connections('iceland', 'gb')
+            self.connections('scand','gb')
+            self.connections('gb','weur')
+            self.connections('weur','seur')
+            self.connections('seur','neur')
+            self.connections('weur','neur')
+            self.connections('gb','neur')
+            self.connections('scand','neur')
+            self.connections('scand','ukraine')
+            self.connections('neur','ukraine')
+            self.connections('seur','ukraine')
+
+        #NORTH AMERICA TO EUROPE
+        if NORTH_AMERICA and EUROPE:
+            self.connections('greenland','iceland')
+
+        #AFRICA
+        if AFRICA:
+            self.board_dict['nafr'] = Territory('North Africa',[335,270])
+            self.board_dict['egypt'] = Territory('Egypt',[400,250])
+            self.board_dict['eafr'] = Territory('East Africa', [420,300])
+            self.board_dict['congo'] = Territory('Congo', [370,335])
+            self.board_dict['safr'] = Territory('South Africa', [390,430])
+            self.board_dict['mad'] = Territory('Madagascar', [455,410])
+
+            self.connections('nafr','egypt')
+            self.connections('nafr','eafr')
+            self.connections('nafr','congo')
+            self.connections('egypt','eafr')
+            self.connections('eafr','congo')
+            self.connections('eafr','safr')
+            self.connections('eafr','mad')
+            self.connections('mad','safr')
+            self.connections('safr','congo')
+
+        #SOUTH AMERICA AND EUROPE TO AFRICA
+        if AFRICA and SOUTH_AMERICA:
+            self.connections('brazil','nafr')
+        if AFRICA and EUROPE:
+            self.connections('seur','nafr')
+            self.connections('seur','egypt')
+
+        #ASIA
+        if ASIA:
+            self.board_dict['ural'] = Territory('Ural', [510, 155])
+            self.board_dict['siberia'] = Territory('Siberia', [555, 95])
+            self.board_dict['yakutsk'] = Territory('Yakutsk', [620, 75])
+            self.board_dict['kam'] = Territory('Kamchatka', [700, 105])
+            self.board_dict['irkutsk'] = Territory('Irkutsk', [620, 135])
+            self.board_dict['mong'] = Territory('Mongolia', [600, 175])
+            self.board_dict['japan'] = Territory('Japan', [680, 185])
+            self.board_dict['china'] = Territory('China', [570, 225])
+            self.board_dict['afgh'] = Territory('Afghanistan', [490, 190])
+            self.board_dict['me'] = Territory('Middle East', [460, 245])
+            self.board_dict['india'] = Territory('India', [535, 260])
+            self.board_dict['siam'] = Territory('Siam', [580, 275])
+
+            self.connections('me','afgh')
+            self.connections('me', 'india')
+            self.connections('afgh','india')
+            self.connections('afgh','ural')
+            self.connections('afgh','china')
+            self.connections('india','siam')
+            self.connections('india','china')
+            self.connections('siam','china')
+            self.connections('china','ural')
+            self.connections('china','siberia')
+            self.connections('china','mong')
+            self.connections('ural','siberia')
+            self.connections('siberia','yakutsk')
+            self.connections('siberia','irkutsk')
+            self.connections('siberia','mong')
+            self.connections('mong','irkutsk')
+            self.connections('mong','japan')
+            self.connections('mong', 'kam')
+            self.connections('irkutsk','yakutsk')
+            self.connections('irkutsk','kam')
+            self.connections('yakutsk','kam')
+            self.connections('japan','kam')
+
+        # AFRICA EUROPE AND NORTH AMERICA TO ASIA
+        if ASIA and AFRICA:
+            self.connections('egypt','me')
+            self.connections('eafr','me')
+            self.connections('seur','me')
+        if ASIA and EUROPE:
+            self.connections('ukraine','me')
+            self.connections('ukraine','afgh')
+            self.connections('ukraine','ural')
+        if ASIA and NORTH_AMERICA:
+            self.connections('alaska','kam')
+
+        # AUSTRALIA
+        if AUSTRALIA:
+            self.board_dict['indo'] = Territory('Indonesia', [570, 340])
+            self.board_dict['ng'] = Territory('New Guinea', [650, 350])
+            self.board_dict['waus'] = Territory('Western Australia', [605, 430])
+            self.board_dict['eaus'] = Territory('Eastern Australia', [665, 430])
+
+            self.connections('indo','ng')
+            self.connections('indo','waus')
+            self.connections('ng','waus')
+            self.connections('ng','eaus')
+            self.connections('waus','eaus')
+
+        # ASIA TO AUSTRALIA
+        if ASIA and AUSTRALIA:
+            self.connections('indo', 'siam')
 
     #Initialize the board state variable
     def initialize_board_state(self,num_players,num_phases):

@@ -5,10 +5,11 @@ from gym_env import RiskEnv
 
 set_seed(0)
 #initialize environment
-env = RiskEnv(max_steps=10,player_debug_mode=False)
+env = RiskEnv(max_steps=3000,player_debug_mode=False)
 
 #parameters
 num_episodes = 1
+episode_total_steps = []
 
 #play the environment
 for episode in range(num_episodes):
@@ -18,10 +19,8 @@ for episode in range(num_episodes):
     done = False
     truncated = False
     action = None
-    perspective_player_index = env.perspective_player_index
-    print(f"Perspective Player: {perspective_player_index}")
     print(f"Episode: {episode}")
-    env.render()
+    env.render(render_mode='Visual')
     
     #play the environment 
     while not done and not truncated:
@@ -31,9 +30,11 @@ for episode in range(num_episodes):
         obs, reward, done, truncated, info = env.step(action)
         
         #render
-        env.render()
+        env.render(render_mode='Visual')
 
     print(f"Total Steps: {env.total_steps}")
+    episode_total_steps.append(env.total_steps)
 
 #close the environment
 env.close()
+print(np.mean(episode_total_steps))

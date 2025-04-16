@@ -37,11 +37,23 @@ class Player:
     # Asks the player where to place troops
     # Returns if the placing was successful and the reward the player should get
     def place_troops(self, board_obj,action):
-        available = self.amountOfOwned
+        #the amount of troops you have available is equal to the max between 3 and the amount of territories you have // 3
+        available = max(3,(self.amountOfOwned // 3))
+        #add bonuses by the amount of continents you own
+        bonuses = [bonus for key, (active, count, continent_list, bonus) in board_obj.continent_dict.items() if active and all(terr in self.myOwnedTerritories for terr in continent_list)]
+        available += sum(bonuses)
+        if sum(bonuses) > 0:
+            print(bonuses)
+            print(self.myOwnedTerritories)
+            print(available)
         #find the valid territories to place troops on
         valid_terr = [index for index,terr in enumerate(self.terr_list) if terr in self.myOwnedTerritories]
         #set invalid actions to 0 probability
         valid_actions = [a if index in valid_terr else 0 for index,a in enumerate(action)]
+        #set valid actions uniformly if all valid actions had 0 probability
+        if np.sum(valid_actions) == 0:
+            self.debug_mode and print("Sum of valid action probabilities were zero. Uniformly distributing valid action space.")
+            valid_actions = [1 if index in valid_terr else 0 for index,a in enumerate(action)]
         #normalize the valid actions
         valid_actions = valid_actions / np.sum(valid_actions)
         #take sample action
@@ -68,9 +80,11 @@ class Player:
         #set invalid actions to 0 probability
         valid_actions = [a if index in valid_terr or index==len(action) - 1 else 0 for index,a in enumerate(action)]
         
-        #normalize the valid actions
+        #normalize the valid actions - set to uniform if all valid probabilities were zero
+        if np.sum(valid_actions) == 0:
+            self.debug_mode and print("Sum of valid action probabilities were zero. Uniformly distributing valid action space.")
+            valid_actions = [1 if index in valid_terr or index==len(action) - 1 else 0 for index,a in enumerate(action)]
         valid_actions = valid_actions / np.sum(valid_actions)
-
         #take sample action
         sampled_action = np.random.choice(len(valid_actions), p=valid_actions)
         self.from_terr_sel = self.terr_list[sampled_action] if sampled_action < len(self.terr_list) else None
@@ -90,6 +104,11 @@ class Player:
 
         #set invalid actions to 0 probability
         valid_actions = [a if index in valid_terr else 0 for index,a in enumerate(action)]
+
+        #set valid actions uniformly if all valid actions had 0 probability
+        if np.sum(valid_actions) == 0:
+            self.debug_mode and print("Sum of valid action probabilities were zero. Uniformly distributing valid action space.")
+            valid_actions = [1 if index in valid_terr else 0 for index,a in enumerate(action)]
 
         #normalize the valid actions
         valid_actions = valid_actions / np.sum(valid_actions)
@@ -112,6 +131,12 @@ class Player:
 
         #set invalid actions to 0 probability
         valid_actions = [a if index in valid_terr or index==len(action) - 1 else 0 for index,a in enumerate(action)]
+
+        #set valid actions uniformly if all valid actions had 0 probability
+        if np.sum(valid_actions) == 0:
+            self.debug_mode and print("Sum of valid action probabilities were zero. Uniformly distributing valid action space.")
+            valid_actions = [1 if index in valid_terr or index==len(action) - 1 else 0 for index,a in enumerate(action)]
+        
         #normalize the valid actions
         valid_actions = valid_actions / np.sum(valid_actions)
         #take sample action
@@ -130,7 +155,13 @@ class Player:
     def fortify_to(self,board_obj,action):
         valid_terr = [self.terr_list.index(terr) for terr in self.terr_list if board_obj.adjacencyIsValid(self.from_terr_sel,terr) and terr in self.myOwnedTerritories]
         #set invalid actions to 0 probability
-        valid_actions = [a if index in valid_terr or index==len(action - 1) else 0 for index,a in enumerate(action)]
+        valid_actions = [a if index in valid_terr else 0 for index,a in enumerate(action)]
+        
+        #set valid actions uniformly if all valid actions had 0 probability
+        if np.sum(valid_actions) == 0:
+            self.debug_mode and print("Sum of valid action probabilities were zero. Uniformly distributing valid action space.")
+            valid_actions = [1 if index in valid_terr else 0 for index,a in enumerate(action)]
+        
         #normalize the valid actions
         valid_actions = valid_actions / np.sum(valid_actions)
         #take sample action

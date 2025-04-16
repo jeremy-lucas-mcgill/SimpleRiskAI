@@ -38,9 +38,6 @@ class RiskEnv(gym.Env):
         #call reset
         self.game.newGame()
 
-        #set the perspective player
-        self.perspective_player_index = self.game.perspective_player_index
-
         #start step count
         self.total_steps = 0
 

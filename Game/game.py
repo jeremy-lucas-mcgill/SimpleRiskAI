@@ -50,9 +50,6 @@ class Game:
         self.currentPlayer = random.choice(range(len(self.player_list)))
         self.currentPhase = 1
 
-        #set perspective player
-        self.perspective_player_index = random.choice(range(len(self.player_list)))
-
         #Initialize Observation
         self.board.update_board_state(self.currentPlayer, len(self.player_list), self.currentPhase,self.total_num_phases,-1)
 
@@ -97,7 +94,6 @@ class Game:
             if self.currentPhase == 1:
                 self.debug_mode and print(f'-Player {self.player_list[self.currentPlayer].index} turn-')
                 next_phase,reward = currPlayer.place_troops(self.board,action)
-                reward = reward if currPlayer.index == self.perspective_player_index else 0
                 if next_phase:
                     self.currentPhase = 2
             
@@ -168,7 +164,7 @@ class Game:
     def distributeLand(self):
         # get all possible territory keys
         possible_terrs = list(self.board.board_dict.keys())
-        player_ind = 0
+        player_ind = random.randint(0,PLAYERS - 1)
         # loop until all territories have troops
         while len(possible_terrs) > 0:
             # pick a random territory key

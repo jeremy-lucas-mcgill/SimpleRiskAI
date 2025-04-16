@@ -47,7 +47,8 @@ class RiskDisplay():
             #draw text
             text = self.small_font.render(str(index), True, BLACK)
             text_rect = text.get_rect()
-            text_rect.left = circle_center[0] + RADIUS*50
+            text_right_offset, _ = grid_to_screen_scale((RADIUS,RADIUS))
+            text_rect.left = circle_center[0] + text_right_offset
             text_rect.centery = circle_center[1] 
             self.screen.blit(text, text_rect)
 

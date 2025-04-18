@@ -17,10 +17,10 @@ def set_seed(seed=42):
 
 set_seed(0)  # Call this function at the start of your script
 #initialize environment
-env = RiskEnv(max_steps=500)
+env = RiskEnv(max_steps=2000)
 
 #set the model path
-model_path = "new_alphazero_model_500.pth"
+model_path = "new_model_30.pth"
 
 #load the model if it exists
 if os.path.exists:

@@ -4,34 +4,36 @@ from Game.config import *
 import math
 import torch
 import numpy as np
+import time
+import copy
 
 #class for AlphaZero Monte Carlo Tree Search
 #Input the root node
 #output action distribution
 class AlphaMCTS:
-    def __init__(self,root_state,model,game,num_simuations=100,tau=1):
+    def __init__(self,root_state,model,adjacency_dict,continent_dict,num_simuations=100,tau=1):
         #create the root node with the root state, no parent, and probability 1
         self.root = Node(root_state,None,1)
         self.model = model
         self.num_simulations = num_simuations
         self.tau = tau
-        self.game = game
+        self.adjacency_dict = adjacency_dict
+        self.continent_dict = continent_dict
+
     def search(self):
         for _ in range(self.num_simulations):
             #search for best leaf node
             node = self.select(self.root)
             #expand the node if it is not terminal
             if not isTerminalState(node.state):
-                #expand the node
-                self.expand(node)
-                #get the vale from this node
-                value = self.simulate(node)
+                #expand the node and get the value
+                value = self.expand(node)
             else:
                 #if it is a terminal node, value = 1, as the game is won
                 value = 1
             #backpropogate
-            self.backpropogate(node,value)
-
+            self.backpropogate(node,value)        
+            
     def select(self,node):
         #selecting a leaf node
         while node.children:
@@ -41,15 +43,18 @@ class AlphaMCTS:
         return node
     
     def expand(self,node):
+        #get the state info
+        player_territories,current_player_index,current_phase,current_last_selected_index = getStateInfo(node.state)
         #valid actions, should be a list of ints corresponding to the valid actions
-        valid_actions = getValidActionsFromState(node.state,self.game)
+        valid_actions = getValidActions(current_phase,player_territories[current_player_index],current_last_selected_index,self.adjacency_dict)
         #next states
-        next_states = [getNextState(node.state,action,self.game) for action in valid_actions]
+        next_states = [getNextState(player_territories,current_player_index,current_phase,current_last_selected_index,self.continent_dict,action) for action in valid_actions]
         #probabilties
         value, probabilities = self.model.sample_action(torch.tensor(node.state,dtype=torch.float32))
-        valid_probabilities = probabilities.detach().numpy()[valid_actions]
+        valid_probabilities = probabilities[valid_actions].detach().cpu().numpy()
         #expand the node
         node.expand(valid_actions,next_states,valid_probabilities)
+        return value.item()
 
     def simulate(self,node):
         value, _ = self.model.sample_action(torch.tensor(node.state,dtype=torch.float32))
@@ -112,25 +117,126 @@ class Node:
             else:
                 print("ERROR: Duplicate Action!")
         
-# Passing in a Game, State, and Action, return the next State
-# The game should be of type game, the state should be a 1d array, and the action should be of type int
-# Next State will also be a 1d array
-def getNextState(state, action, game):
-    game = loadGameState(state, game)
-    #one hot action
-    action = np.eye(len(game.board.board_dict.keys()) + 1)[action]
-    #carry out action
-    game.playersPlay(action)
 
-    #return the state
-    return game.board.board_state
+# Get all valid actions depending on the phase of the game, setting all probabilities equal to 1
+def getValidActions(phase,player_terr_list,last_territory_selected_index,adjacency_dict):
+    #create sample action equal to the length of all the territories + 1 for doing nothing
+    sample_action = np.ones(len(player_terr_list) + 1)
+    valid_action_indices = None
+    #create match for each phase
+    match (phase):
+        case 1:
+            #find the valid territories to place troops on
+            valid_indices = [index for index, troops in enumerate(player_terr_list) if troops > 0]
+            #set invalid actions to 0 probability
+            valid_actions = [a if index in valid_indices else 0 for index,a in enumerate(sample_action)]
+            #turn valid actions into indices [0,1,1,0,0] into [1,2]
+            valid_action_indices = [index for index,action in enumerate(valid_actions) if action == 1]
+        case 2:
+            #Create a mask for valid attacks. Territory should be owned by the player,
+            #have at least more than one troop, and have adjacency with at least one territory that the player doesn't own
+            #this preliminary check makes sure the territories are owned and more than one troop 
+            possible_indices = [index for index, troops in enumerate(player_terr_list) if troops > 1]
+            #iterate through the possible territories making sure each has adjacency
+            #with at least one territory that the player doesn't own
+            #iterate through each index, calling AdjTerr(index) and checking if that list contains a territory in our list that is zero (meaning we don't own it)
+            valid_indices = [index for index in possible_indices if any(player_terr_list[adj_index] == 0 for adj_index in AdjacentIndices(index,adjacency_dict))]
+            #set invalid actions to 0 probability
+            valid_actions = [a if index in valid_indices or index==len(sample_action) - 1 else 0 for index,a in enumerate(sample_action)]
+            #turn valid actions into indices 
+            valid_action_indices = [index for index,action in enumerate(valid_actions) if action == 1]
+        case 3:
+            #indexes that are adjacent and we don't own to the last selected index
+            valid_indices = [index for index in AdjacentIndices(last_territory_selected_index,adjacency_dict) if player_terr_list[index] == 0]
+            #set invalid actions to 0 probability
+            valid_actions = [a if index in valid_indices else 0 for index,a in enumerate(sample_action)]
+            #turn valid actions into indices 
+            valid_action_indices = [index for index,action in enumerate(valid_actions) if action == 1]
+        case 4:
+            #this preliminary check makes sure the territories are owned and more than one troop 
+            possible_indices = [index for index, troops in enumerate(player_terr_list) if troops > 1]
 
-def getValidActionsFromState(state, game):
-    game = loadGameState(state,game)
-    # get list of all actions from current player
-    valid_actions = game.player_list[game.currentPlayer].getValidActions(game.board,game.currentPhase)
+            #iterate through the possible territories making sure each has adjacency
+            #with at least one territory that the player owns
+            valid_indices = [index for index in possible_indices if any(player_terr_list[adj_index] != 0 for adj_index in AdjacentIndices(index,adjacency_dict))]
+            #set invalid actions to 0 probability
+            valid_actions = [a if index in valid_indices or index==len(sample_action) - 1 else 0 for index,a in enumerate(sample_action)]
+            #turn valid actions into indices 
+            valid_action_indices = [index for index,action in enumerate(valid_actions) if action == 1]
+        case 5:
+            #indexes that are adjacent and we do own to the last selected index
+            valid_indices = [index for index in AdjacentIndices(last_territory_selected_index,adjacency_dict) if player_terr_list[index] != 0]
+            #set invalid actions to 0 probability
+            valid_actions = [a if index in valid_indices else 0 for index, a in enumerate(sample_action)]
+            #turn valid actions into indices 
+            valid_action_indices = [index for index,action in enumerate(valid_actions) if action == 1]
+        case _:
+            print("Invalid Phase")
+            return None
+    return valid_action_indices
 
-    return valid_actions
+#Get next state should return a 1d array of the next state
+#territory matrix
+#turn
+#phase
+#last index
+def getNextState(player_territories,current_player_index,current_phase,current_last_selected_index,continent_dict,action):
+    player_territories = np.array(player_territories)
+    match(current_phase):
+        #place troops
+        case 1:
+            #calculate territory bonus
+            available = max(3,np.count_nonzero(player_territories[current_player_index]) // 3)
+            #calculate the continent bonus
+            bonus = 0
+            for (indices, troops) in continent_dict.values():
+                #check if player owns all territories in the continent
+                if all(player_territories[current_player_index][i] > 0 for i in indices):
+                    bonus += troops
+            player_territories[current_player_index][action] += available + bonus
+            current_phase = 2
+            current_last_selected_index = -1
+        #select attack from
+        case 2:
+            current_last_selected_index,current_phase = (action,3) if action != TERRITORIES else (-1,4)
+        #select attack to
+        case 3:
+            defending_player = np.nonzero(player_territories[:,action])[0].item()
+            troops_attacking = player_territories[current_player_index][current_last_selected_index] - 1
+            troops_defending = player_territories[defending_player][action]
+
+            attacking_troops_left,defending_troops_left = handleAttack(troops_attacking,troops_defending)
+            if attacking_troops_left <= 0:
+                player_territories[current_player_index][current_last_selected_index] = 1
+                player_territories[defending_player][action] = defending_troops_left
+            elif defending_troops_left <= 0:
+                player_territories[current_player_index][current_last_selected_index] = 1
+                player_territories[defending_player][action] = 0
+                player_territories[current_player_index][action] = attacking_troops_left
+            current_phase = 2
+            current_last_selected_index = -1
+        #select fortify from
+        case 4:
+            if action != TERRITORIES:
+                current_last_selected_index = action
+                current_phase = 5
+            else:
+                current_last_selected_index = -1
+                current_phase = 1
+                current_player_index += 1
+                current_player_index = current_player_index % PLAYERS
+        #select fortify to
+        case 5:
+            amount_to_fortify = player_territories[current_player_index][current_last_selected_index] - 1
+            player_territories[current_player_index][current_last_selected_index] = 1
+            player_territories[current_player_index][action] += amount_to_fortify
+            current_phase = 1
+            current_player_index += 1
+            current_player_index = current_player_index % PLAYERS
+            current_last_selected_index = -1
+        #return the new state
+    new_state = turnStateInfoTo1DArray(player_territories,current_player_index,current_phase,current_last_selected_index)
+    return new_state
 
 def getStateInfo(state):
     #extract info from state
@@ -149,8 +255,14 @@ def getStateInfo(state):
 
     return player_territories,current_player_index,current_phase,current_last_selected_index
 
-def isTerminalState(state):
+def turnStateInfoTo1DArray(player_territories,current_player_index,current_phase,current_last_selected_index):
+    flat_player_territories = np.array(player_territories).flatten()
+    one_hot_current_player_index = np.eye(PLAYERS)[current_player_index]
+    one_hot_current_phase = np.eye(PHASES)[current_phase - 1]
+    one_hot_current_last_selected_index = np.eye(TERRITORIES)[current_last_selected_index] if current_last_selected_index != -1 else np.zeros(TERRITORIES)
+    return np.concatenate([flat_player_territories,one_hot_current_player_index,one_hot_current_phase,one_hot_current_last_selected_index])
 
+def isTerminalState(state):
     #extract info from state
     player_territories,_,_,_ = getStateInfo(state)
 
@@ -159,27 +271,69 @@ def isTerminalState(state):
 
     return player_won
 
-def loadGameState(state,game):
-    #reset the game
-    game.reset()
-    #extract info from state
-    player_territories,current_player_index,current_phase,current_last_selected_index = getStateInfo(state)
+#return a list of indices according to the game
+def AdjacentIndices(index,adjacency_dict):
+    if index >= TERRITORIES:
+        return None
+    else:
+        return adjacency_dict[index]
 
-    #fill board, call set troops on all territories, add the territories to the players
-    for index,key in enumerate(game.board.board_dict.keys()):
-        num_troops, player_index = [(p_t[index],p_i) for p_i,p_t in enumerate(player_territories) if p_t[index] != 0][0]
-        game.board.setTroops(key, num_troops, game.player_list[player_index])
-        game.player_list[player_index].gainATerritory(key)
+def handleAttack(attacking_troops,defending_troops):
+     # do rolls
+        while True:
+            if attacking_troops >= 3:
+                diceA = 3
+            elif attacking_troops == 2:
+                diceA = 2
+            elif attacking_troops == 1:
+                diceA = 1
+            else:
+                #attacker lost
+                return attacking_troops,defending_troops
+
+            if defending_troops >= 2:
+                diceB = 2
+            elif defending_troops == 1:
+                diceB = 1
+            else:
+                # defender lost, move attacker troops into territory
+                return attacking_troops,defending_troops
+            
+            # roll for combat
+            troopDiffA, troopDiffB = computeAttack(diceA, diceB)
+            attacking_troops -= troopDiffA
+            defending_troops -= troopDiffB
+
+# Roll dice and figure out troop losses
+def computeAttack(diceA, diceB):
+    rollsA, rollsB = getRolls(diceA, diceB)
+    return doRolls(rollsA, rollsB)
+
+# Returns rolled dice in a sorted array
+def getRolls(diceA, diceB):
+    pArolls = []
+    pBrolls = []
+
+    for r in range(diceA):
+        pArolls.append(random.randint(1,6))
+    for r in range(diceB):
+        pBrolls.append(random.randint(1,6))
     
-    #set the game turn and phase
-    game.currentPlayer = current_player_index
-    game.currentPhase = current_phase
+    pArolls = list(reversed(sorted(pArolls)))
+    pBrolls = list(reversed(sorted(pBrolls)))
 
-    #set the last index of the current player
-    if current_last_selected_index != -1:
-        game.player_list[current_player_index].from_terr_sel = game.player_list[current_player_index].terr_list[current_last_selected_index]
+    return pArolls, pBrolls
+
+# Computes troop losses
+def doRolls(rollsA, rollsB):
+    troopDiffA = 0
+    troopDiffB = 0
+
+    for i,dice in enumerate(rollsB):
+        if i <= len(rollsA)-1:
+            if dice >= rollsA[i]:
+                troopDiffA += 1
+            else:
+                troopDiffB += 1
     
-    #update the initial board state
-    game.board.update_board_state(current_player_index,game.num_players,current_phase,game.total_num_phases, current_last_selected_index)
-
-    return game
+    return troopDiffA, troopDiffB

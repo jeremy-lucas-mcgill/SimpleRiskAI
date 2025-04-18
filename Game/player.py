@@ -42,10 +42,6 @@ class Player:
         #add bonuses by the amount of continents you own
         bonuses = [bonus for key, (active, count, continent_list, bonus) in board_obj.continent_dict.items() if active and all(terr in self.myOwnedTerritories for terr in continent_list)]
         available += sum(bonuses)
-        if sum(bonuses) > 0:
-            print(bonuses)
-            print(self.myOwnedTerritories)
-            print(available)
         #find the valid territories to place troops on
         valid_terr = [index for index,terr in enumerate(self.terr_list) if terr in self.myOwnedTerritories]
         #set invalid actions to 0 probability
@@ -168,64 +164,7 @@ class Player:
         sampled_action = np.random.choice(len(valid_actions), p=valid_actions)
         self.to_terr_sel = self.terr_list[sampled_action]
         self.debug_mode and print(f"Phase 5: Player {self.index} fortifies to {self.to_terr_sel}")
-    
-    # Get all valid actions depending on the phase of the game, setting all probabilities equal to 1
-    def getValidActions(self,board_obj,phase):
-        #create sample action equal to the length of all the territories + 1 for doing nothing
-        sample_action = np.ones(len(self.terr_list) + 1)
-        #create match for each phase
-        match (phase):
-            case 1:
-                #find the valid territories to place troops on
-                valid_terr = [index for index,terr in enumerate(self.terr_list) if terr in self.myOwnedTerritories]
-                #set invalid actions to 0 probability
-                valid_actions = [a if index in valid_terr else 0 for index,a in enumerate(sample_action)]
-                #turn valid actions into indices [0,1,1,0,0] into [1,2]
-                valid_action_indices = [index for index,action in enumerate(valid_actions) if action == 1]
-                return valid_action_indices
-            case 2:
-                #Create a mask for valid attacks. Territory should be owned by the player,
-                #have at least more than one troop, and have adjacency with at least one territory that the player doesn't own
-                #this preliminary check makes sure the territories are owned and more than one troop 
-                possible_terr = [terr for terr in self.terr_list if terr in self.myOwnedTerritories and board_obj.board_dict[terr].troops > 1]
-                #iterate through the possible territories making sure each has adjacency
-                #with at least one territory that the player doesn't own
-                valid_terr = [self.terr_list.index(terr) for terr in possible_terr if any(board_obj.adjacencyIsValid(terr,t) for t in self.terr_list if t not in self.myOwnedTerritories)]
-                #set invalid actions to 0 probability
-                valid_actions = [a if index in valid_terr or index==len(sample_action) - 1 else 0 for index,a in enumerate(sample_action)]
-                #turn valid actions into indices 
-                valid_action_indices = [index for index,action in enumerate(valid_actions) if action == 1]
-                return valid_action_indices
-            case 3:
-                valid_terr = [self.terr_list.index(terr) for terr in self.terr_list if board_obj.adjacencyIsValid(self.from_terr_sel,terr) and terr not in self.myOwnedTerritories]
-                #set invalid actions to 0 probability
-                valid_actions = [a if index in valid_terr else 0 for index,a in enumerate(sample_action)]
-                #turn valid actions into indices 
-                valid_action_indices = [index for index,action in enumerate(valid_actions) if action == 1]
-                return valid_action_indices
-            case 4:
-                #this preliminary check makes sure the territories are owned and more than one troop 
-                possible_terr = [terr for terr in self.terr_list if terr in self.myOwnedTerritories and board_obj.board_dict[terr].troops > 1]
-                
-                #iterate through the possible territories making sure each has adjacency
-                #with at least one territory that the player owns
-                valid_terr = [self.terr_list.index(terr) for terr in possible_terr if any(board_obj.adjacencyIsValid(terr,t) for t in self.terr_list if t in self.myOwnedTerritories)]
-
-                #set invalid actions to 0 probability
-                valid_actions = [a if index in valid_terr or index==len(sample_action) - 1 else 0 for index,a in enumerate(sample_action)]
-                #turn valid actions into indices 
-                valid_action_indices = [index for index,action in enumerate(valid_actions) if action == 1]
-                return valid_action_indices
-            case 5:
-                valid_terr = [self.terr_list.index(terr) for terr in self.terr_list if board_obj.adjacencyIsValid(self.from_terr_sel,terr) and terr in self.myOwnedTerritories]
-                #set invalid actions to 0 probability
-                valid_actions = [a if index in valid_terr or index==len(sample_action - 1) else 0 for index,a in enumerate(sample_action)]
-                #turn valid actions into indices 
-                valid_action_indices = [index for index,action in enumerate(valid_actions) if action == 1]
-                return valid_action_indices
-            case _:
-                print("Invalid Phase")
-                return None
+        
     #attack
     def attack(self):
         result = self.to_terr_sel,self.from_terr_sel

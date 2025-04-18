@@ -8,7 +8,7 @@ set_seed(0)
 env = RiskEnv(max_steps=3000,player_debug_mode=False)
 
 #parameters
-num_episodes = 1
+num_episodes = 3
 episode_total_steps = []
 
 #play the environment

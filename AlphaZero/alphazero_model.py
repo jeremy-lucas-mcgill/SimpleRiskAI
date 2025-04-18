@@ -80,5 +80,3 @@ class AlphaZeroModel(nn.Module):
             print(f"Epoch {epoch}/{epochs}, Loss: {running_loss/len(data_loader)}")
 
 
-
-

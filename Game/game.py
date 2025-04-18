@@ -63,7 +63,6 @@ class Game:
         #Initialize Observation
         self.board.update_board_state(self.currentPlayer, len(self.player_list), self.currentPhase,self.total_num_phases,-1)
 
-
     # MAIN
     # Checks for win condition
     # triggers the end game
@@ -143,7 +142,6 @@ class Game:
         while self.player_list[(self.currentPlayer + 1) % len(self.player_list)].amountOfOwned == 0:
             self.currentPlayer = (self.currentPlayer + 1) % len(self.player_list)
         self.currentPlayer = (self.currentPlayer + 1) % len(self.player_list)
-    
 
     # Carry out the attack of a player
     def handleAttack(self, currPlayer: Player):

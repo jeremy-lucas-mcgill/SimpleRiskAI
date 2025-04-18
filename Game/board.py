@@ -62,6 +62,7 @@ class Board:
             self.connections('wus', 'eus')
             self.connections('wus', 'ca')
             self.connections('eus', 'ca')
+            self.connections('eus','ontario')
 
         #SOUTH AMERICA
         if SOUTH_AMERICA:
@@ -175,8 +176,8 @@ class Board:
         if ASIA and AFRICA:
             self.connections('egypt','me')
             self.connections('eafr','me')
-            self.connections('seur','me')
         if ASIA and EUROPE:
+            self.connections('seur','me')
             self.connections('ukraine','me')
             self.connections('ukraine','afgh')
             self.connections('ukraine','ural')
@@ -325,6 +326,7 @@ class Board:
     def reset(self):
         for name,t in self.board_dict.items():
             t.reset()
+
     def __repr__(self):
         rep = ""
         for k in self.board_dict.keys():

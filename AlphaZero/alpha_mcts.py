@@ -11,13 +11,14 @@ import copy
 #Input the root node
 #output action distribution
 class AlphaMCTS:
-    def __init__(self,root_state,model,adjacency_dict,continent_dict,num_simuations=100,tau=1):
+    def __init__(self,root_state,model,adjacency_dict,adjacency_matrix,continent_dict,num_simulations=100,tau=1):
         #create the root node with the root state, no parent, and probability 1
         self.root = Node(root_state,None,1)
         self.model = model
-        self.num_simulations = num_simuations
+        self.num_simulations = num_simulations
         self.tau = tau
         self.adjacency_dict = adjacency_dict
+        self.adjacency_matrix = adjacency_matrix
         self.continent_dict = continent_dict
 
     def search(self):
@@ -50,15 +51,15 @@ class AlphaMCTS:
         #next states
         next_states = [getNextState(player_territories,current_player_index,current_phase,current_last_selected_index,self.continent_dict,action) for action in valid_actions]
         #probabilties
-        value, probabilities = self.model.sample_action(torch.tensor(node.state,dtype=torch.float32))
-        valid_probabilities = probabilities[valid_actions].detach().cpu().numpy()
+        value, probabilities = self.model.sample_action(torch.tensor(enrich_features(node.state,self.adjacency_matrix),dtype=torch.float32))
+        #renormalize
+        valid = probabilities[valid_actions]
+        valid = (valid / valid.sum()) if valid.sum() != 0 else torch.full_like(valid, 1.0 / valid.numel())
+        valid_probabilities = valid.detach().cpu().numpy()
         #expand the node
         node.expand(valid_actions,next_states,valid_probabilities)
         return value.item()
-
-    def simulate(self,node):
-        value, _ = self.model.sample_action(torch.tensor(node.state,dtype=torch.float32))
-        return value.item()
+    
     def backpropogate(self,node,value):
         #get the player index that the original value belongs to
         _, positive_player_index, _, _ = getStateInfo(node.state)
@@ -71,6 +72,7 @@ class AlphaMCTS:
             #go up the tree
             node = node.parent
     def get_final_action_distribution(self):
+        player_territories,current_player_index,current_phase,current_last_selected_index = getStateInfo(self.root.state)
         #get the total visit count per child
         visits = np.array([child.N for child in self.root.children.values()])
         #get the list of all the action names
@@ -80,7 +82,7 @@ class AlphaMCTS:
         #normalize probabilities
         probs = probs / np.sum(probs)
         #return action probabilities
-        sample_action = np.zeros(self.model.output_action_size)
+        sample_action = np.zeros(self.model.action_size)
         for (action,probability) in zip(actions,probs):
             sample_action[int(action)] = probability
         return sample_action
@@ -186,7 +188,7 @@ def getNextState(player_territories,current_player_index,current_phase,current_l
         #place troops
         case 1:
             #calculate territory bonus
-            available = max(3,np.count_nonzero(player_territories[current_player_index]) // 3)
+            available = max(TERRITORIES_PER_TROOP,np.count_nonzero(player_territories[current_player_index]) // TERRITORIES_PER_TROOP)
             #calculate the continent bonus
             bonus = 0
             for (indices, troops) in continent_dict.values():
@@ -223,16 +225,18 @@ def getNextState(player_territories,current_player_index,current_phase,current_l
             else:
                 current_last_selected_index = -1
                 current_phase = 1
-                current_player_index += 1
-                current_player_index = current_player_index % PLAYERS
+                while (np.all(player_territories[(current_player_index + 1) % PLAYERS] == 0)):
+                    current_player_index = (current_player_index) + 1 % PLAYERS
+                current_player_index = (current_player_index + 1) % PLAYERS
         #select fortify to
         case 5:
             amount_to_fortify = player_territories[current_player_index][current_last_selected_index] - 1
             player_territories[current_player_index][current_last_selected_index] = 1
             player_territories[current_player_index][action] += amount_to_fortify
             current_phase = 1
-            current_player_index += 1
-            current_player_index = current_player_index % PLAYERS
+            while (np.all(player_territories[(current_player_index + 1) % PLAYERS] == 0)):
+                    current_player_index = (current_player_index + 1) % PLAYERS
+            current_player_index = (current_player_index + 1) % PLAYERS
             current_last_selected_index = -1
         #return the new state
     new_state = turnStateInfoTo1DArray(player_territories,current_player_index,current_phase,current_last_selected_index)
@@ -277,6 +281,56 @@ def AdjacentIndices(index,adjacency_dict):
         return None
     else:
         return adjacency_dict[index]
+
+#enrich features
+def enrich_features(state, adjacency_matrix):
+        state = normalize_state(state)
+        player_territories,current_player_index,current_phase,current_last_selected_index = getStateInfo(state)
+        new_state = []
+        for i in range(TERRITORIES):
+            troop_counts = np.array(player_territories)[:, i]
+            owner = np.nonzero(troop_counts)[0][0]
+
+            normalized_troop_count = troop_counts[owner]
+            is_owner = 1 if current_player_index == owner else 0
+            owner_one_hot = np.eye(PLAYERS)[owner]
+            last_selected = 1 if i == current_last_selected_index else 0
+            one_hot_phase = np.eye(PHASES)[current_phase-1]
+
+            territory_features = [
+            normalized_troop_count,
+            is_owner,
+            last_selected,
+            *owner_one_hot,
+            *one_hot_phase
+            ]
+            new_state.append(territory_features)
+
+        new_state = np.array(new_state).flatten()
+
+        # Flatten and append the adjacency matrix
+        flattened_adjacency = adjacency_matrix.flatten()
+        enriched = np.concatenate([new_state, flattened_adjacency])
+        return enriched
+
+def build_adjacency_matrix(adjacency_dict):
+    T = len(adjacency_dict)
+    adjacency_matrix = np.zeros((T, T), dtype=int)
+
+    for i, neighbors in adjacency_dict.items():
+        for j in neighbors:
+            adjacency_matrix[i][j] = 1
+    return adjacency_matrix
+
+#normalize the troops
+def normalize_state(state):
+    n = TERRITORIES*PLAYERS
+    max_value = max(state[:n]) if max(state[:n]) > 0 else 1
+    return [0 if t == 0 else max(0.1, round(t / max_value, 1)) if i < n else t for i, t in enumerate(state)]
+
+def softmax(x):
+    e_x = np.exp(x)
+    return e_x / e_x.sum()
 
 def handleAttack(attacking_troops,defending_troops):
      # do rolls

@@ -15,18 +15,17 @@ import time
 
 set_seed(0)
 #initialize environment
-env = RiskEnv(max_steps=2000)
+env = RiskEnv(max_steps=500)
 #initialize the connections dictionary
 territories = list(env.game.board.board_dict.values())
-print(territories)
 
 adjacency_dict = {}
 
 for i, territory in enumerate(territories):
-    print(territory,territory.adjecency_list)
     adjacency_indexes = [territories.index(adj) for adj in territory.adjecency_list]
     adjacency_dict[i] = adjacency_indexes
-
+#adjacency matrix
+adjacency_matrix = build_adjacency_matrix(adjacency_dict)
 #initialize the continent dictionary
 name_to_index = {name: idx for idx, name in enumerate(env.game.board.board_dict.keys())}
     
@@ -35,57 +34,70 @@ continent_dict = {
     for continent_name, data in env.game.board.continent_dict.items()
     if data[0]
 }
-print(continent_dict)
 
 #set the model path
-model_path = "model_30.pth"
+model_path = "model_path.pth"
 
 #load the model if it exists
 if os.path.exists(model_path):
     model = torch.load(model_path)
 else:
-    model = AlphaZeroModel(env.observation_space.shape[0],128,env.action_space.shape[0])
+    model = AlphaZeroModel(TERRITORIES*(3+PLAYERS+PHASES)+TERRITORIES*TERRITORIES,256,env.action_space.n)
+#set model to eval for inference
+model.eval()
 
 #initialize the data
 #the data will be in the form state, action, player index of turn
 #then, once the game is finished, the player index of turn column 
 #will be adjusted to -1, 0, or 1 according to depending on if they won or not
-dataset = RiskDataset(50000)
+dataset = RiskDataset(env.max_steps*125,adjacency_dict)
 
 #training parameters
-num_episodes = 1000
-num_episodes_per_update = 1
+num_episodes = 10
+num_episodes_per_update = 10
 episode_lengths = []
+#tree search depth
+def tree_search_depth(episode):
+       return 10
 
 #self play
 for episode in tqdm(range(num_episodes), desc="Training Progress"):
     #check if it is time to update the model
     if episode % num_episodes_per_update == 0 and episode > 0:
-        print("Training Model.")
+        dataset.action_distributions_log(dataset.df)
+        #train start time
+        train_start_time = time.time()
+        #Set model to train
+        model.train()
         #train the model on the dataset
         states = torch.tensor(np.array(dataset.df['state'].to_list()),dtype=torch.float32)
         actions = torch.tensor(np.array(dataset.df['action'].to_list()),dtype=torch.float32)
         values = torch.tensor(dataset.df['value'].values,dtype=torch.float32)
         model.train_model(states,values,actions)
-        if episode > 10:
-            num_episodes_per_update = 10
-        if episode > 200:
-            num_episodes_per_update = 50
+        #set model back to eval
+        model.eval()
+        #train end time
+        train_end_time = time.time()
+        print(f"Training Time: {train_end_time - train_start_time}")
 
     #check if it is time to save the model
     if episode % 100 == 0 and episode > 0:
-        torch.save(model, f"{episode}_{model_path}")
+        torch.save(model, f"{episode}_"+model_path)
     #reset the environment
     obs, _ = env.reset()
     done = False
     truncated = False
     step = 0
+    #get number of simulations
+    num_simulations = tree_search_depth(episode)
     
     #play the environment using the network
     while not done and not truncated:
+        #get obs inof
+        player_territories,current_player_index,current_phase,current_last_selected_index = getStateInfo(obs)
         step += 1
         #initialize the tree search
-        tree_search = AlphaMCTS(obs, model, adjacency_dict,continent_dict, num_simuations=30)
+        tree_search = AlphaMCTS(obs, model, adjacency_dict,adjacency_matrix,continent_dict, num_simulations=num_simulations)
         #call search
         start_search_time = time.time()
         tree_search.search()
@@ -93,23 +105,33 @@ for episode in tqdm(range(num_episodes), desc="Training Progress"):
 
         #get probability distribution from Alpha MCTS
         action = tree_search.get_final_action_distribution()
-        #take a step in the environment
-        obs, _, done, truncated, info = env.step(action)
+        #sample the action
+        env_action = np.random.choice(len(action), p=action)
+        
         #assemble data for this step
-        data_step = (obs, action, info["Current Player"])
+        data_step = (obs, action, current_player_index)
+
         #add to buffer
-        dataset.push(data_step) 
+        dataset.push(data_step)
+
+        #take a step in the environment
+        obs, _, done, truncated, info = env.step(env_action)
+        
     #add the game outcome to the current data being collected
+    #if it was a draw clear the buffer
     if truncated:
-        dataset.add_game_outcome(-1)
+         dataset.buffer.clear()
     else:
-        dataset.add_game_outcome(info["Winner"])
-    
+        dataset.add_game_outcome(info["Winner"],adjacency_matrix,True)
+
     episode_lengths.append(step)
 
+dataset.action_distributions_log(dataset.df,True)
 #save model at the end
 torch.save(model, "new_"+model_path)
 
+#save dataset
+dataset.save(f"{model_path}_dataset.csv")
 #close the environment
 env.close()
 

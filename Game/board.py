@@ -27,12 +27,12 @@ class Board:
 
         #Continent Dictionary (ACTIVE,NUMBER OF TERRITORIES, LIST, TROOPS TO BE GAINED)
         self.continent_dict = {
-            'NORTH AMERICA':(NORTH_AMERICA,9,north_america,5),
-            'SOUTH AMERICA':(SOUTH_AMERICA,4,south_america,2),
-            'EUROPE':(EUROPE,7,europe,5),
-            'AFRICA':(AFRICA,6,africa,3),
-            'ASIA':(ASIA,12,asia,7),
-            'AUSTRALIA':(AUSTRALIA,4,australia,2)
+            'NORTH AMERICA':(NORTH_AMERICA,9,north_america,10),
+            'SOUTH AMERICA':(SOUTH_AMERICA,4,south_america,8),
+            'EUROPE':(EUROPE,7,europe,10),
+            'AFRICA':(AFRICA,6,africa,6),
+            'ASIA':(ASIA,12,asia,14),
+            'AUSTRALIA':(AUSTRALIA,4,australia,4)
         }
 
         ###Define the Connections###

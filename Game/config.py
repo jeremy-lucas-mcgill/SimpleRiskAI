@@ -1,18 +1,18 @@
 ####################game parameters############################
-PLAYERS = 6
+PLAYERS = 2
 PHASES = 5
 MAXTROOPS = 1000
+TERRITORIES_PER_TROOP = 3
 ###DEFINE WHICH CONTINENTS TO USE###
 NORTH_AMERICA = True #9
 SOUTH_AMERICA = True #4
 EUROPE = True #7
 AFRICA = True #6
-ASIA = True #12
-AUSTRALIA = True #4
+ASIA = False #12
+AUSTRALIA = False #4
 
 ###UPDATE TERRITORY COUNT###
 TERRITORIES = sum([count if active else 0 for (active, count) in [(NORTH_AMERICA,9),(SOUTH_AMERICA,4),(EUROPE,7),(AFRICA,6),(ASIA,12),(AUSTRALIA,4)]])
-print(TERRITORIES)
 
 ####################display parameters############################
 import pygame
@@ -37,7 +37,7 @@ LINE_WIDTH = 1
 FPS = 60
 RADIUS = 20
 FONT_SIZE = 30
-TIME_DELAY = 100
+TIME_DELAY = 200
 
 # Map grid coordinates to screen coordinates
 def grid_pos_to_screen_pos(grid_pos):

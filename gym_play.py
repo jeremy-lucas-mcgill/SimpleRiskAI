@@ -1,15 +1,14 @@
-import torch
 import numpy as np
 from Game.config import *
 from gym_env import RiskEnv
 
-set_seed(0)
+set_seed(1)
 #initialize environment
-env = RiskEnv(max_steps=3000,player_debug_mode=False)
+env = RiskEnv(max_steps=500,player_debug_mode=False)
 
 #parameters
-num_episodes = 3
-episode_total_steps = []
+num_episodes = 100
+episode_lengths = []
 
 #play the environment
 for episode in range(num_episodes):
@@ -33,8 +32,7 @@ for episode in range(num_episodes):
         env.render(render_mode='Visual')
 
     print(f"Total Steps: {env.total_steps}")
-    episode_total_steps.append(env.total_steps)
-
+    episode_lengths.append(env.total_steps)
+print(np.mean(episode_lengths))
 #close the environment
 env.close()
-print(np.mean(episode_total_steps))

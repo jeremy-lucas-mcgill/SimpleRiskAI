@@ -4,19 +4,19 @@ import torch.nn.functional as F
 from torch.utils.data import TensorDataset,DataLoader
 
 class AlphaZeroModel(nn.Module):
-    def __init__(self,input_size,hidden_size,output_action_size):
+    def __init__(self,input_size,hidden_size,action_size):
         super().__init__()
 
         #parameters
         self.input_size = input_size
         self.hidden_size = hidden_size
-        self.output_action_size = output_action_size
+        self.action_size = action_size
 
         #define first layer
         self.fc1 = nn.Linear(input_size,hidden_size)
 
         #define policy head
-        self.fc_policy = nn.Linear(hidden_size,output_action_size)
+        self.fc_policy = nn.Linear(hidden_size,action_size)
 
         #define value head
         self.fc_value = nn.Linear(hidden_size,1)
@@ -28,9 +28,14 @@ class AlphaZeroModel(nn.Module):
         return v, p
     
     def sample_action(self,state):
-        v, p = self.forward(state)
-        return v, F.softmax(p,dim=-1)
-
+        with torch.no_grad():
+            v, p = self.forward(state)
+            return v, F.softmax(p,dim=-1)
+    
+    def action_logits(self,state):
+        with torch.no_grad():
+            v, p_logits = self.forward(state)
+            return v, p_logits
     
     def loss(self,v,p, z, pi, model_params,c=1e-4):
         #calculate value loss
@@ -77,6 +82,6 @@ class AlphaZeroModel(nn.Module):
                 optimizer.step()
                 running_loss += loss.item()
 
-            print(f"Epoch {epoch}/{epochs}, Loss: {running_loss/len(data_loader)}")
+            print(f"Epoch {epoch+1}/{epochs}, Loss: {running_loss/len(data_loader)}")
 
 

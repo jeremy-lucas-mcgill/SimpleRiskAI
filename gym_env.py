@@ -7,7 +7,7 @@ from Game.config import *
 
 
 class RiskEnv(gym.Env):
-    def __init__(self,max_steps=1000,player_debug_mode=False,board_debug_mode=False,game_debug_mode=False):
+    def __init__(self,max_steps=2500,player_debug_mode=False,board_debug_mode=False,game_debug_mode=False):
         #call super
         super().__init__()
 
@@ -17,7 +17,7 @@ class RiskEnv(gym.Env):
 
         #define action space: number of territories + 1
         action_length = len(self.game.board.board_dict.keys()) + 1
-        self.action_space = spaces.Box(low=0,high=1,shape=(action_length,),dtype=np.float32)
+        self.action_space = spaces.Discrete(action_length)
 
         #define observation space: grid of pxn (number of players x number of territories) + one hot phase, + one hot player, + last
         #territory selected
@@ -60,8 +60,7 @@ class RiskEnv(gym.Env):
         if render_mode == 'Visual':
             self.display.draw(self.game.board)
         else:
-            print_obs(self.game.board.board_state,None)
-            
+            print_obs(self.game.board.board_state,None)       
 
     def close(self):
        self.display.close()

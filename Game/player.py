@@ -15,7 +15,7 @@ class Player:
 
         self.from_terr_sel = None       #variable to keep track of from territory selected during attack/fortify
         self.to_terr_sel = None         #variable to keep track of from territory selected during attack/fortify
-        self.debug_mode = debug_mode        #toggle print statements
+        self.debug_mode = False       #toggle print statements
     
     # When restarting a new game, clear the player
     def clearPlayer(self):
@@ -38,23 +38,19 @@ class Player:
     # Returns if the placing was successful and the reward the player should get
     def place_troops(self, board_obj,action):
         #the amount of troops you have available is equal to the max between 3 and the amount of territories you have // 3
-        available = max(3,(self.amountOfOwned // 3))
+        available = max(TERRITORIES_PER_TROOP,(self.amountOfOwned // TERRITORIES_PER_TROOP))
         #add bonuses by the amount of continents you own
         bonuses = [bonus for key, (active, count, continent_list, bonus) in board_obj.continent_dict.items() if active and all(terr in self.myOwnedTerritories for terr in continent_list)]
         available += sum(bonuses)
         #find the valid territories to place troops on
         valid_terr = [index for index,terr in enumerate(self.terr_list) if terr in self.myOwnedTerritories]
-        #set invalid actions to 0 probability
-        valid_actions = [a if index in valid_terr else 0 for index,a in enumerate(action)]
-        #set valid actions uniformly if all valid actions had 0 probability
-        if np.sum(valid_actions) == 0:
-            self.debug_mode and print("Sum of valid action probabilities were zero. Uniformly distributing valid action space.")
-            valid_actions = [1 if index in valid_terr else 0 for index,a in enumerate(action)]
-        #normalize the valid actions
-        valid_actions = valid_actions / np.sum(valid_actions)
-        #take sample action
-        sampled_action = np.random.choice(len(valid_actions), p=valid_actions)
-        terrkey = self.terr_list[sampled_action]
+        #get the valid action index
+        valid_actions = [index for index in range(len(self.terr_list) + 1) if index in valid_terr]
+        #check if action is in the valid actions
+        if action not in valid_actions:
+            action = random.choice(valid_actions)
+            self.debug_mode and print("Illegal Action for Placing Troops")
+        terrkey = self.terr_list[action]
         #place troops
         if terrkey in self.myOwnedTerritories:
             board_obj.addTroops(terrkey,available,self)
@@ -74,16 +70,15 @@ class Player:
         valid_terr = [self.terr_list.index(terr) for terr in possible_terr if any(board_obj.adjacencyIsValid(terr,t) for t in self.terr_list if t not in self.myOwnedTerritories)]
 
         #set invalid actions to 0 probability
-        valid_actions = [a if index in valid_terr or index==len(action) - 1 else 0 for index,a in enumerate(action)]
+        valid_actions = [index for index in range(len(self.terr_list) + 1) if index in valid_terr or index == len(self.terr_list)]
         
-        #normalize the valid actions - set to uniform if all valid probabilities were zero
-        if np.sum(valid_actions) == 0:
-            self.debug_mode and print("Sum of valid action probabilities were zero. Uniformly distributing valid action space.")
-            valid_actions = [1 if index in valid_terr or index==len(action) - 1 else 0 for index,a in enumerate(action)]
-        valid_actions = valid_actions / np.sum(valid_actions)
-        #take sample action
-        sampled_action = np.random.choice(len(valid_actions), p=valid_actions)
-        self.from_terr_sel = self.terr_list[sampled_action] if sampled_action < len(self.terr_list) else None
+        #set the action to a random action
+        if action not in valid_actions:
+            action = random.choice(valid_actions)
+            self.debug_mode and print("Illegal Action for Choosing Where to Attack From")
+        
+        #do the action
+        self.from_terr_sel = self.terr_list[action] if action < len(self.terr_list) else None
 
         if self.from_terr_sel != None:
             self.debug_mode and print(f"Phase 2: Player {self.index} attacks from {self.from_terr_sel}")
@@ -95,23 +90,12 @@ class Player:
     # GAME ACTION Phase 3
     #  Asks the player where to attack to.
     def attack_to(self,board_obj,action):
-
-        valid_terr = [self.terr_list.index(terr) for terr in self.terr_list if board_obj.adjacencyIsValid(self.from_terr_sel,terr) and terr not in self.myOwnedTerritories]
-
+        valid_actions = [self.terr_list.index(terr) for terr in self.terr_list if board_obj.adjacencyIsValid(self.from_terr_sel,terr) and terr not in self.myOwnedTerritories]
         #set invalid actions to 0 probability
-        valid_actions = [a if index in valid_terr else 0 for index,a in enumerate(action)]
-
-        #set valid actions uniformly if all valid actions had 0 probability
-        if np.sum(valid_actions) == 0:
-            self.debug_mode and print("Sum of valid action probabilities were zero. Uniformly distributing valid action space.")
-            valid_actions = [1 if index in valid_terr else 0 for index,a in enumerate(action)]
-
-        #normalize the valid actions
-        valid_actions = valid_actions / np.sum(valid_actions)
-        
-        #take sample action
-        sampled_action = np.random.choice(len(valid_actions), p=valid_actions)
-        self.to_terr_sel = self.terr_list[sampled_action]
+        if action not in valid_actions:
+            action = random.choice(valid_actions)
+            self.debug_mode and print("Illegal Move for Choosing Where to Attack to")
+        self.to_terr_sel = self.terr_list[action]
 
         self.debug_mode and print(f"Phase 3: Player {self.index} attacks to {self.to_terr_sel}")
 
@@ -126,18 +110,14 @@ class Player:
         valid_terr = [self.terr_list.index(terr) for terr in possible_terr if any(board_obj.adjacencyIsValid(terr,t) for t in self.terr_list if t in self.myOwnedTerritories)]
 
         #set invalid actions to 0 probability
-        valid_actions = [a if index in valid_terr or index==len(action) - 1 else 0 for index,a in enumerate(action)]
+        valid_actions = [index for index in range(len(self.terr_list) + 1) if index in valid_terr or index==len(self.terr_list)]
 
-        #set valid actions uniformly if all valid actions had 0 probability
-        if np.sum(valid_actions) == 0:
-            self.debug_mode and print("Sum of valid action probabilities were zero. Uniformly distributing valid action space.")
-            valid_actions = [1 if index in valid_terr or index==len(action) - 1 else 0 for index,a in enumerate(action)]
+        if action not in valid_actions:
+            action = random.choice(valid_actions)
+            self.debug_mode and print("Illegal Move for Choosing Where to Fortify From")
         
-        #normalize the valid actions
-        valid_actions = valid_actions / np.sum(valid_actions)
-        #take sample action
-        sampled_action = np.random.choice(len(valid_actions), p=valid_actions)
-        self.from_terr_sel = self.terr_list[sampled_action] if sampled_action < len(self.terr_list) else None
+        #do the action
+        self.from_terr_sel = self.terr_list[action] if action < len(self.terr_list) else None
         #Select actions randomly plus the action to not fortify
         if self.from_terr_sel != None:
             self.debug_mode and print(f"Phase 4: Player {self.index} fortifies from {self.from_terr_sel}")
@@ -149,22 +129,14 @@ class Player:
     # GAME ACTION Phase 5
     #  Asks the player where to fortify to
     def fortify_to(self,board_obj,action):
-        valid_terr = [self.terr_list.index(terr) for terr in self.terr_list if board_obj.adjacencyIsValid(self.from_terr_sel,terr) and terr in self.myOwnedTerritories]
-        #set invalid actions to 0 probability
-        valid_actions = [a if index in valid_terr else 0 for index,a in enumerate(action)]
+        valid_actions = [self.terr_list.index(terr) for terr in self.terr_list if board_obj.adjacencyIsValid(self.from_terr_sel,terr) and terr in self.myOwnedTerritories]
         
-        #set valid actions uniformly if all valid actions had 0 probability
-        if np.sum(valid_actions) == 0:
-            self.debug_mode and print("Sum of valid action probabilities were zero. Uniformly distributing valid action space.")
-            valid_actions = [1 if index in valid_terr else 0 for index,a in enumerate(action)]
-        
-        #normalize the valid actions
-        valid_actions = valid_actions / np.sum(valid_actions)
-        #take sample action
-        sampled_action = np.random.choice(len(valid_actions), p=valid_actions)
-        self.to_terr_sel = self.terr_list[sampled_action]
+        if action not in valid_actions:
+            action = random.choice(valid_actions)
+            self.debug_mode and print("Illegal Move for Choosing Where to Fortify to")
+        self.to_terr_sel = self.terr_list[action]
         self.debug_mode and print(f"Phase 5: Player {self.index} fortifies to {self.to_terr_sel}")
-        
+
     #attack
     def attack(self):
         result = self.to_terr_sel,self.from_terr_sel

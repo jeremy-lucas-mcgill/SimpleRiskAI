@@ -7,10 +7,16 @@ from AlphaZero.alpha_mcts import getStateInfo,getValidActions,enrich_features,bu
 from Game.config import *
 import torch.nn.functional as F
 
+###PARAMETERS###
+MODEL_PATH = "Models\\NA SA EUR AFR Models\\300_NA_SA_EUR_AFR.pth"
+RENDER = False
+NUM_EPISODES = 200
+################
+
 set_seed(0)
 #initialize environment
-MAXSTEPS = 500
-env = RiskEnv(max_steps=MAXSTEPS)
+maxsteps = 500
+env = RiskEnv(max_steps=maxsteps)
 
 #initialize the connections dictionary
 territories = list(env.game.board.board_dict.values())
@@ -23,38 +29,31 @@ for i, territory in enumerate(territories):
 
 adjacency_matrix = build_adjacency_matrix(adjacency_dict)
 
-#set the model path
-model_path = "Models\\NA SA EUR AFR Models\\300_NA_SA_EUR_AFR.pth"
-render = False
-
 #load the model if it exists
-if os.path.exists(model_path):
-    model = torch.load(model_path)
+if os.path.exists(MODEL_PATH):
+    model = torch.load(MODEL_PATH)
     model.eval()
     print(model)
 else:
     raise ValueError
 
 #evaluation parameters
-num_episodes = 100
 legal_moves_percentages = []
-number_no_moves = []
 average_steps = []
 average_legal_moves_phases = []
 average_phase_count = []
 
 #self play
-for episode in range(num_episodes):
+for episode in range(NUM_EPISODES):
 
     #reset the environment
     obs, _ = env.reset()
     done = False
     truncated = False
-    no_moves_count = 0
     legal_moves_count = 0
     legal_moves_phases = [0 for _ in range(PHASES)]
     phase_counts = [0 for _ in range(PHASES)]
-    render and env.render(render_mode="Visual")
+    RENDER and env.render(render_mode="Visual")
     
     #play the environment using the network
     while not done and not truncated:
@@ -77,13 +76,10 @@ for episode in range(num_episodes):
         phase_counts[current_phase - 1] += 1
         
         #take a step in the environment
-        if env_action == env.action_space.n - 1:
-            no_moves_count += 1
         obs, reward, done, truncated, info = env.step(env_action)
         #render
-        render and env.render(render_mode="Visual")
+        RENDER and env.render(render_mode="Visual")
 
-    number_no_moves.append(no_moves_count / env.total_steps)
     legal_moves_percentages.append(legal_moves_count / env.total_steps)
     average_steps.append(env.total_steps)
     average_phase_count.append(phase_counts)
@@ -94,7 +90,6 @@ for episode in range(num_episodes):
         average_legal_moves_phases.append(average_per_phase)
 
 print(f"Average Legal Move Percentage: {np.mean(legal_moves_percentages)}")
-print(f"Average No Move Percentage: {np.mean(number_no_moves)}")
 print(f"Legal Moves Phases: {np.mean(np.array(average_legal_moves_phases), axis=0)}")
 print(f"Average Phase Counts: {np.mean(np.array(average_phase_count), axis=0)}")
 print(f"Average Total Steps: {np.mean(average_steps)}")

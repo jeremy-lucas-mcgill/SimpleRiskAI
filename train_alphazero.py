@@ -13,8 +13,15 @@ from tqdm import tqdm
 import  matplotlib.pyplot as plt
 import time 
 
-set_seed(0)
+###PARAMETERS###
+NUM_EPISODES = 10
+UPDATE_FREQUENCY = 100
+SAVE_FREQUENCY = 100
+MODEL_PATH = "model_path.pth"
+###############
+
 #initialize environment
+set_seed(0)
 env = RiskEnv(max_steps=500)
 #initialize the connections dictionary
 territories = list(env.game.board.board_dict.values())
@@ -35,12 +42,9 @@ continent_dict = {
     if data[0]
 }
 
-#set the model path
-model_path = "model_path.pth"
-
 #load the model if it exists
-if os.path.exists(model_path):
-    model = torch.load(model_path)
+if os.path.exists(MODEL_PATH):
+    model = torch.load(MODEL_PATH)
 else:
     model = AlphaZeroModel(TERRITORIES*(3+PLAYERS+PHASES)+TERRITORIES*TERRITORIES,256,env.action_space.n)
 #set model to eval for inference
@@ -53,8 +57,8 @@ model.eval()
 dataset = RiskDataset(env.max_steps*125,adjacency_dict)
 
 #training parameters
-num_episodes = 10
-num_episodes_per_update = 10
+num_episodes = NUM_EPISODES
+num_episodes_per_update = UPDATE_FREQUENCY
 episode_lengths = []
 #tree search depth
 def tree_search_depth(episode):
@@ -81,8 +85,8 @@ for episode in tqdm(range(num_episodes), desc="Training Progress"):
         print(f"Training Time: {train_end_time - train_start_time}")
 
     #check if it is time to save the model
-    if episode % 100 == 0 and episode > 0:
-        torch.save(model, f"{episode}_"+model_path)
+    if episode % SAVE_FREQUENCY == 0 and episode > 0:
+        torch.save(model, f"{episode}_"+MODEL_PATH)
     #reset the environment
     obs, _ = env.reset()
     done = False
@@ -128,10 +132,10 @@ for episode in tqdm(range(num_episodes), desc="Training Progress"):
 
 dataset.action_distributions_log(dataset.df,True)
 #save model at the end
-torch.save(model, "new_"+model_path)
+torch.save(model, "new_"+MODEL_PATH)
 
 #save dataset
-dataset.save(f"{model_path}_dataset.csv")
+dataset.save(f"{MODEL_PATH}_dataset.csv")
 #close the environment
 env.close()
 

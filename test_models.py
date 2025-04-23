@@ -7,14 +7,19 @@ from gym_env import RiskEnv
 from AlphaZero.alpha_mcts import getStateInfo, enrich_features, build_adjacency_matrix
 from Game.config import *
 
-#config
-set_seed(0)
-NUM_EPISODES = 100
-MAX_STEPS = 500
+
+###PARAMETERS###
+MODEL_CONFIGS = {
+    "Models\\NA SA EUR AFR Models\\300_NA_SA_EUR_AFR.pth": 1,
+}
+NUM_EPISODES = 200
 RENDER = False
-ARGMAX = False
+#################
 
 #environment setup
+set_seed(0)
+ARGMAX = False
+MAX_STEPS = 500
 env = RiskEnv(max_steps=MAX_STEPS)
 
 territories = list(env.game.board.board_dict.values())
@@ -22,15 +27,12 @@ adjacency_dict = {i: [territories.index(adj) for adj in t.adjecency_list] for i,
 adjacency_matrix = build_adjacency_matrix(adjacency_dict)
 
 #model setup 
-model_configs = {
-    "Models\\NA SA EUR AFR Models\\300_NA_SA_EUR_AFR.pth": 1,
-}
 PLAYERS_TOTAL = PLAYERS
-total_assigned = sum(model_configs.values())
+total_assigned = sum(MODEL_CONFIGS.values())
 random_players_present = total_assigned < PLAYERS_TOTAL
 
 loaded_models = {}
-for path in model_configs:
+for path in MODEL_CONFIGS:
     if os.path.exists(path):
         model = torch.load(path)
         model.eval()
@@ -39,7 +41,7 @@ for path in model_configs:
         raise FileNotFoundError(f"Model '{path}' not found.")
 
 #tracking setup
-model_wins = {path: 0 for path in model_configs}
+model_wins = {path: 0 for path in MODEL_CONFIGS}
 model_wins["random"] = 0
 ties = 0
 
@@ -54,7 +56,7 @@ for episode in range(NUM_EPISODES):
     _, current_player_index, _, _ = getStateInfo(obs)
     #assign players to models/random
     assignments = []
-    for path, count in model_configs.items():
+    for path, count in MODEL_CONFIGS.items():
         assignments.extend([path] * count)
     assignments.extend([None] * (PLAYERS_TOTAL - len(assignments)))
     random.shuffle(assignments)

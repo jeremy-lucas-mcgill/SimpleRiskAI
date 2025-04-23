@@ -56,7 +56,7 @@ Before running any scripts, adjust the environment settings in:
   - `num_episodes`: Number of self-play episodes to run
   - `update_frequency`: Number of training steps per update
   - `save_frequency`: Frequency at which the model is saved
-  - `model_path`: path to save the model to
+  - `model_path`: Path to save the model
 
 ---
 

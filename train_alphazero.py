@@ -14,7 +14,7 @@ import  matplotlib.pyplot as plt
 import time 
 
 ###PARAMETERS###
-NUM_EPISODES = 10
+NUM_EPISODES = 1001
 UPDATE_FREQUENCY = 100
 SAVE_FREQUENCY = 100
 MODEL_PATH = "model_path.pth"
